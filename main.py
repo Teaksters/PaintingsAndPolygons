@@ -21,17 +21,13 @@ h, w = np.shape(goal)[0], np.shape(goal)[1]
 method = "MSE"
 # outdirx = "test/"
 
-# genome size settings
-polygons = 250
-vertices = 1000
-
 
 # ppa specific settings
 population_size = 30
 nmax = 5  # max number of runners for the best indidiviual within a population
 
 
-def experiment(name, algorithm, paintings, repetitions, polys, iterations, savepoints):
+def experiment(name, algorithm, paintings, repetitions, polys, iterations, savepoints, V_p):
     # get date/time
     now = time.strftime("%c")
 
@@ -44,10 +40,11 @@ def experiment(name, algorithm, paintings, repetitions, polys, iterations, savep
 
     # logging a lot of metadata
     logfile = os.path.join(folder, name + "-LOG.txt")
+
     with open(logfile, 'a') as f:
         f.write("EXPERIMENT " + name + " LOG\n")
         f.write("DATE " + now + "\n\n")
-        f.write("STOP CONDITION " +str(iterations)+ " iterations\n\n")
+        f.write("STOP CONDITION " +str(iterations) + " iterations\n\n")
         f.write("LIST OF PAINTINGS (" + str(len(paintings)) +")\n")
         for painting in paintings:
             f.write(painting + "\n")
@@ -85,21 +82,25 @@ def experiment(name, algorithm, paintings, repetitions, polys, iterations, savep
                     nparam = (poly * 4 * 2) + (poly * 4) + poly
                     mmax = math.ceil(nparam * 0.10)
 
-                    solver = PPA(goal, w, h, poly, poly*4, "MSE", savepoints, outdir, iterations, population_size, nmax, mmax)
+                    solver = PPA(goal, w, h, poly, poly * V_p, "MSE", savepoints, outdir, iterations, population_size, nmax, mmax)
 
                 elif algorithm == "HC":
-                    solver = Hillclimber(goal, w, h, poly, poly * 4, "MSE", savepoints, outdir, iterations)
+                    solver = Hillclimber(goal, w, h, poly, poly * V_p, "MSE", savepoints, outdir, iterations)
 
                 elif algorithm =="SA":
-                    solver = SA(goal, w, h, poly, poly * 4, "MSE", savepoints, outdir, iterations)
+                    solver = SA(goal, w, h, poly, poly * V_p, "MSE", savepoints, outdir, iterations)
 
                 # run the solver with selected algorithm
                 solver.run()
                 solver.write_data()
+
+                for poly in solver.best.genome:
+                    print(len(poly[0]))
+
                 bestMSE = solver.best.fitness
 
                 # save best value in maindata sheet
-                datarow = [painting_name, str(poly * 4), str(repetition), bestMSE]
+                datarow = [painting_name, str(poly * V_p), str(repetition), bestMSE]
 
                 with open(datafile, 'a', newline = '') as f:
                     writer = csv.writer(f)
@@ -118,10 +119,11 @@ name = "1miltest.x2"
 # paintins = ["paintings/monalisa-240-180.png", "paintings/bach-240-180.png", "paintings/dali-240-180.png", "paintings/mondriaan2-180-240.png", "paintings/pollock-240-180.png", "paintings/starrynight-240-180.png"]
 paintins = ["paintings/kiss-180-240.png"]
 savepoints = list(range(0, 250000, 1000)) + list(range(250000, 1000000, 10000))
-repetitions = 2
-polys = [250]
-# polys = [5, 25, 75, 125, 175, 250]
-iterations = 1000
+repetitions = 1
+polys = [60]
+V_p = 6
+# polys = [60, 120, 180, 240, 300, 600]
+iterations = 10000
 # define a list of savepoints, more in the first part of the run, and less later.
 # savepoints = list(range(0, 2500, 50)) + list(range(2500, 10000, 500))
 
@@ -131,7 +133,7 @@ nmax = 5
 
 args = (name, paintins, repetitions, polys, iterations, savepoints)
 
-names = ["kiss1", "kiss2", "kiss3", "kiss4", "kiss5", "kiss6"]
+names = ["kiss1.6", "kiss2", "kiss3", "kiss4", "kiss5", "kiss6"]
 
 #experiment(name, "HC" paintins, repetitions, polys, iterations, savepoints)
 
@@ -141,6 +143,6 @@ if __name__ == '__main__':
     worker_count = 1
     worker_pool = []
     for i in range(worker_count):
-        args = (names[i], "HC", paintins, repetitions, polys, iterations, savepoints)
+        args = (names[i], "HC", paintins, repetitions, polys, iterations, savepoints, V_p)
         p = Process(target=experiment, args=args)
         p.start()
