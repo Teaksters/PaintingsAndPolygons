@@ -69,7 +69,7 @@ class Organism():
             color = (randint(0, 255),
                      randint(0, 255),
                      randint(0, 255),
-                     randint(30, 60))
+                     randint(0, 255))
             # Add polygon data to final combination
             gene = (poly, color)
             self.genome.append(gene)

@@ -1,33 +1,13 @@
-from random import randint, choice, shuffle
-from PIL import Image
-import numpy as np
-from algorithms import Algorithm, Hillclimber, SA, PPA
 import time
 import math
 import os
+import multiprocessing as mp
 import csv
-from multiprocessing import Process, current_process
+import helpers as hlp
 
 
-# im_goal = Image.open("paintings/bach-240-180.png")
-# im_goal = Image.open("paintings/dali-240-180.png")
-im_goal = Image.open("paintings/monalisa-240-180.png")
-# im_goal = Image.open("paintings/pollock-240-180.png")
-# im_goal = Image.open("paintings/mondriaan2-180-240.png")
-
-
-goal = np.array(im_goal)
-h, w = np.shape(goal)[0], np.shape(goal)[1]
-method = "MSE"
-# outdirx = "test/"
-
-
-# ppa specific settings
-population_size = 30
-nmax = 5  # max number of runners for the best indidiviual within a population
-
-
-def experiment(name, algorithm, paintings, repetitions, polys, iterations, savepoints, V_p):
+def experiment(name, algorithm, paintings, repetitions, V_total, iterations,
+               savepoints, V_polygon):
     # get date/time
     now = time.strftime("%c")
 
@@ -36,93 +16,66 @@ def experiment(name, algorithm, paintings, repetitions, polys, iterations, savep
     if not os.path.exists(folder):
         os.makedirs(folder)
 
-    total_runs = len(polys) * len(paintings) * repetitions
+    # Update name to be algorithm specific
+    name = algorithm
 
-    # logging a lot of metadata
+    # logging experiment metadata
+    total_runs = len(V_total) * len(paintings) * repetitions
     logfile = os.path.join(folder, name + "-LOG.txt")
-
-    with open(logfile, 'a') as f:
-        f.write("EXPERIMENT " + name + " LOG\n")
-        f.write("DATE " + now + "\n\n")
-        f.write("STOP CONDITION " +str(iterations) + " iterations\n\n")
-        f.write("LIST OF PAINTINGS (" + str(len(paintings)) +")\n")
-        for painting in paintings:
-            f.write(painting + "\n")
-        f.write("\n")
-        f.write("POLYS " + str(len(polys)) + " " + str(polys) + "\n\n")
-        f.write("REPETITIONS " +str(repetitions) + "\n\n")
-        f.write("RESULTING IN A TOTAL OF " + str(total_runs) + " RUNS\n\n")
-        f.write("STARTING EXPERIMENT NOW!\n")
+    hlp.log_test_statistics(logfile, name, now, iterations, paintings, V_total,
+                            repetitions, total_runs)
 
     # initializing the main datafile
     datafile = os.path.join(folder, name + "-DATA.csv")
-    header = ["Painting", "Vertices", " Replication", "MSE"]
-    with open(datafile, 'a', newline = '') as f:
-        writer = csv.writer(f)
-        writer.writerow(header)
+    if not os.path.exists(datafile):
+        hlp.init_datafile(datafile)
 
-
-    # main experiment, looping through repetitions, poly numbers, and paintings:
-    exp = 1
+    # main experiment, looping through repetitions, vertex numbers, and paintings:
     for painting in paintings:
         painting_name = painting.split("/")[1].split("-")[0]
-        for poly in polys:
-            for repetition in range(repetitions):
-                tic = time.time()
+        for V_tot in V_total:
+            n = (painting_name + "-" + algorithm + "_" + str(V_polygon) + "_" +
+                 str(V_tot))
+            # existing =
+            for repetition in range(1, repetitions + 1):
+                start = time.time()
                 # make a directory for this run, containing the per iteration data and a selection of images
-                outdir = os.path.join(folder, str(exp) + "-" + str(repetition) + "-" + str(poly) + "-" + painting_name)
+                n = n + "_" + str(repetition)
+                outdir = os.path.join(folder, n)
                 os.makedirs(outdir)
 
-                # run the hillclimber
-                im_goal = Image.open(painting)
-                goal = np.array(im_goal)
-                h, w = np.shape(goal)[0], np.shape(goal)[1]
-
-                if algorithm == "PPA":
-                    nparam = (poly * 4 * 2) + (poly * 4) + poly
-                    mmax = math.ceil(nparam * 0.10)
-
-                    solver = PPA(goal, w, h, poly, poly * V_p, "MSE", savepoints, outdir, iterations, population_size, nmax, mmax)
-
-                elif algorithm == "HC":
-                    solver = Hillclimber(goal, w, h, poly, poly * V_p, "MSE", savepoints, outdir, iterations)
-
-                elif algorithm =="SA":
-                    solver = SA(goal, w, h, poly, poly * V_p, "MSE", savepoints, outdir, iterations)
-
                 # run the solver with selected algorithm
+                solver = hlp.solver_select(painting, algorithm, V_tot, V_polygon,
+                                           savepoints, outdir, iterations,
+                                           population_size, nmax)
                 solver.run()
                 solver.write_data()
-
-                for poly in solver.best.genome:
-                    print(len(poly[0]))
 
                 bestMSE = solver.best.fitness
 
                 # save best value in maindata sheet
-                datarow = [painting_name, str(poly * V_p), str(repetition), bestMSE]
+                datarow = [painting_name, str(V_tot), str(V_polygon), str(repetition), bestMSE]
 
                 with open(datafile, 'a', newline = '') as f:
                     writer = csv.writer(f)
                     writer.writerow(datarow)
 
-                toc = time.time()
+                end = time.time()
                 now = time.strftime("%c")
                 with open(logfile, 'a') as f:
-                    f.write(now + " finished run " + str(exp) + "/" + str(total_runs) + " n: " + str(repetition) + " poly: " + str(poly) + " painting: " + painting_name + " in " + str((toc - tic)/60) + " minutes\n")
+                    f.write(now + " finished run " + str(repetition) + "/" +
+                            str(total_runs) + " V_total: " + str(V_tot) +
+                            " painting: " + painting_name + " in " +
+                            str((end - start)/60) + " minutes\n")
 
-                exp += 1
 
-
-
-name = "1miltest.x2"
 # paintins = ["paintings/monalisa-240-180.png", "paintings/bach-240-180.png", "paintings/dali-240-180.png", "paintings/mondriaan2-180-240.png", "paintings/pollock-240-180.png", "paintings/starrynight-240-180.png"]
 paintins = ["paintings/kiss-180-240.png"]
 savepoints = list(range(0, 250000, 1000)) + list(range(250000, 1000000, 10000))
 repetitions = 1
-polys = [60]
-V_p = 6
-# polys = [60, 120, 180, 240, 300, 600]
+V_total = [60, 300, 600]
+V_polygon = 3
+# V_total = [60, 120, 180, 240, 300, 600]
 iterations = 10000
 # define a list of savepoints, more in the first part of the run, and less later.
 # savepoints = list(range(0, 2500, 50)) + list(range(2500, 10000, 500))
@@ -130,12 +83,9 @@ iterations = 10000
 population_size = 30
 nmax = 5
 
+names = [p.split('/')[1].split('-')[0] for p in paintins]
 
-args = (name, paintins, repetitions, polys, iterations, savepoints)
-
-names = ["kiss1.6", "kiss2", "kiss3", "kiss4", "kiss5", "kiss6"]
-
-#experiment(name, "HC" paintins, repetitions, polys, iterations, savepoints)
+#experiment(name, "HC" paintins, repetitions, V_total, iterations, savepoints)
 
 # parallelize stuff
 
@@ -143,6 +93,6 @@ if __name__ == '__main__':
     worker_count = 1
     worker_pool = []
     for i in range(worker_count):
-        args = (names[i], "HC", paintins, repetitions, polys, iterations, savepoints, V_p)
-        p = Process(target=experiment, args=args)
+        args = (names[i], "HC", paintins, repetitions, V_total, iterations, savepoints, V_polygon)
+        p = mp.Process(target=experiment, args=args)
         p.start()
