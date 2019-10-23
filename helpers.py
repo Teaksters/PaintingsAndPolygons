@@ -82,7 +82,7 @@ def experiment(name, algorithm, paintings, repetitions, V_total, iterations,
 
     # logging experiment metadata
     current_run = 1
-    total_runs = len(V_total) * len(paintings) * repetitions
+    total_runs = len(V_total) * len(paintings) * repetitions * len(V_total)
     logfile = os.path.join(main_res_folder, name + "-LOG.txt")
     log_test_statistics(logfile, name, now, iterations, paintings, V_total,
                         repetitions, total_runs)
@@ -102,39 +102,40 @@ def experiment(name, algorithm, paintings, repetitions, V_total, iterations,
             os.makedirs(folder)
 
         for V_tot in V_total:
-            n = (painting_name + "-" + algorithm + "_" + str(V_polygon) + "_" +
-                 str(V_tot))
-            # existing =
-            for repetition in range(1, repetitions + 1):
-                start = time.time()
-                # make a directory for this run, containing the per iteration data and a selection of images
-                n = n + "_" + str(repetition)
-                outdir = os.path.join(folder, n)
-                os.makedirs(outdir)
+            for V_pol in V_polygon:
+                n = (painting_name + "-" + algorithm + "_" + str(V_pol) + "_" +
+                     str(V_tot))
+                # existing =
+                for repetition in range(1, repetitions + 1):
+                    start = time.time()
+                    # make a directory to contain iteration data + images
+                    n = n + "_" + str(repetition)
+                    outdir = os.path.join(folder, n)
+                    os.makedirs(outdir)
 
-                # run the solver with selected algorithm
-                solver = solver_select(painting, algorithm, V_tot,
-                                       V_polygon, savepoints, outdir,
-                                       iterations, population_size, nmax)
-                solver.run()
-                solver.write_data()
+                    # run the solver with selected algorithm
+                    solver = solver_select(painting, algorithm, V_tot,
+                                           V_pol, savepoints, outdir,
+                                           iterations, population_size, nmax)
+                    solver.run()
+                    solver.write_data()
 
-                bestMSE = solver.best.fitness
+                    # save best value in main data sheet
+                    bestMSE = solver.best.fitness
+                    datarow = [painting_name, str(V_tot), str(V_pol),
+                               str(repetition), bestMSE]
 
-                # save best value in maindata sheet
-                datarow = [painting_name, str(V_tot), str(V_polygon),
-                           str(repetition), bestMSE]
+                    with open(datafile, 'a', newline='') as f:
+                        writer = csv.writer(f)
+                        writer.writerow(datarow)
 
-                with open(datafile, 'a', newline='') as f:
-                    writer = csv.writer(f)
-                    writer.writerow(datarow)
-
-                end = time.time()
-                now = time.strftime("%c")
-                with open(logfile, 'a') as f:
-                    f.write(now + " finished run " + str(current_run) + "/" +
-                            str(total_runs) + " V_total: " + str(V_tot) +
-                            " painting: " + painting_name + " in " +
-                            str((end - start)/60) + " minutes\n")
-                f.close()
-                current_run += 1
+                    end = time.time()
+                    now = time.strftime("%c")
+                    with open(logfile, 'a') as f:
+                        f.write(now + " finished run " + str(current_run) +
+                                "/" + str(total_runs) + " V_total: " +
+                                str(V_tot) + " painting: " + painting_name +
+                                " in " + str(round((end - start)/60, 2) +
+                                " minutes.\n"))
+                    f.close()
+                    current_run += 1
