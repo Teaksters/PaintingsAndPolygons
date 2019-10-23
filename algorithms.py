@@ -1,11 +1,12 @@
-import organism as o
 import copy
-from population import *
 import numpy as np
 import math
 from PIL import Image, ImageOps
 import random
 import csv
+
+import organism as o
+import population as p
 
 class Algorithm():
     def __init__(self, goal, w, h, num_poly, num_vertex, comparison_method, savepoints, outdirectory):
@@ -33,13 +34,16 @@ class Algorithm():
 
 class Hillclimber(Algorithm):
 
-    def __init__(self, goal, w, h, num_poly, num_vertex, comparison_method, savepoints, outdirectory, iterations):
-        super().__init__(goal, w, h, num_poly, num_vertex, comparison_method, savepoints, outdirectory)
+    def __init__(self, goal, w, h, num_poly, num_vertex, comparison_method,
+                 savepoints, outdirectory, iterations):
+        super().__init__(goal, w, h, num_poly, num_vertex, comparison_method,
+                         savepoints, outdirectory)
         self.iterations = iterations
 
         # initializing organism
         self.best = o.Organism(0, 0, None, self.w, self.h)
-        self.best.initialize_random_vertices(int(num_vertex / num_poly), num_vertex)
+        self.best.initialize_random_vertices(int(num_vertex / num_poly),
+                                             num_vertex)
         # self.best.initialize_genome(self.num_poly, num_vertex)
         self.best.genome_to_array()
         self.best.calculate_fitness_mse(self.goalpx)
@@ -76,12 +80,14 @@ class Hillclimber(Algorithm):
 
 class SA(Algorithm):
     # https://am207.github.io/2017/wiki/lab4.html
-    def __init__(self, goal, w, h, num_poly, num_vertex, comparison_method, savepoints, outdirectory, iterations):
-        super().__init__(goal, w, h, num_poly, num_vertex, comparison_method, savepoints, outdirectory)
+    def __init__(self, goal, w, h, num_poly, num_vertex, comparison_method,
+                 savepoints, outdirectory, iterations):
+        super().__init__(goal, w, h, num_poly, num_vertex, comparison_method,
+                         savepoints, outdirectory)
         self.iterations = iterations
 
         # initializing organism
-        self.best = Organism(0, 0, None, self.w, self.h)
+        self.best = o.Organism(0, 0, None, self.w, self.h)
         self.best.initialize_genome(self.num_poly, num_vertex)
         self.best.genome_to_array()
         self.best.calculate_fitness_mse(self.goalpx)
@@ -142,7 +148,7 @@ class PPA(Algorithm):
         self.nmax = nmax
         self.mmax = mmax
         self.evaluations = 0
-        self.pop = Population(self.pop_size)
+        self.pop = p.Population(self.pop_size)
         self.best = None
         self.worst = None
 
