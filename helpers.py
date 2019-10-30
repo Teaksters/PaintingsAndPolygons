@@ -132,10 +132,10 @@ def experiment(name, algorithm, paintings, repetitions, V_total, iterations,
                     end = time.time()
                     now = time.strftime("%c")
                     with open(logfile, 'a') as f:
-                        f.write(now + " finished run " + str(current_run) +
-                                "/" + str(total_runs) + " V_total: " +
+                        f.write(str(now) + " finished run " + str(current_run)
+                                + "/" + str(total_runs) + " V_total: " +
                                 str(V_tot) + " painting: " + painting_name +
-                                " in " + str(round((end - start)/60, 2) +
-                                " minutes.\n"))
+                                " in " + str(round((end - start)/60, 2)) +
+                                " minutes.\n")
                     f.close()
                     current_run += 1

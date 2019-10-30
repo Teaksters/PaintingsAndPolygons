@@ -45,7 +45,7 @@ class Hillclimber(Algorithm):
         self.best.initialize_random_vertices(int(num_vertex / num_poly),
                                              num_vertex)
         # self.best.initialize_genome(self.num_poly, num_vertex)
-        self.best.genome_to_array()
+        self.best.img_to_array()
         self.best.calculate_fitness_mse(self.goalpx)
 
         # define data header for hillclimber
@@ -55,17 +55,17 @@ class Hillclimber(Algorithm):
         for i in range(0, self.iterations):
             if i % 100 == 0:
                 print(i)
-            james = o.Organism(0, 0, None, self.w, self.h)
-            james.genome = self.best.deepish_copy_genome()
-            james.id = i
-            james.random_mutation(1)
-            james.genome_to_array()
+            state = o.Organism(0, 0, None, self.w, self.h)
+            state.polygons = self.best.deepish_copy_state()
+            state.id = i
+            state.random_mutation(1)
+            state.img_to_array()
 
             if self.comparison_method == "MSE":
-                james.calculate_fitness_mse(self.goalpx)
+                state.calculate_fitness_mse(self.goalpx)
 
-            if james.fitness <= self.best.fitness:
-                self.best = copy.deepcopy(james)
+            if state.fitness <= self.best.fitness:
+                self.best = copy.deepcopy(state)
                 # print(self.best.fitness)
                 # best.save_img()
 
@@ -89,7 +89,7 @@ class SA(Algorithm):
         # initializing organism
         self.best = o.Organism(0, 0, None, self.w, self.h)
         self.best.initialize_genome(self.num_poly, num_vertex)
-        self.best.genome_to_array()
+        self.best.img_to_array()
         self.best.calculate_fitness_mse(self.goalpx)
 
         self.current = copy.deepcopy(self.best)
@@ -111,22 +111,22 @@ class SA(Algorithm):
 
     def run(self):
         for i in range(1, self.iterations):
-            james = o.Organism(0, i, None, self.w, self.h)
-            james.genome = self.current.deepish_copy_genome()
-            james.random_mutation(1)
-            james.genome_to_array()
+            state = o.Organism(0, i, None, self.w, self.h)
+            state.polygons = self.current.deepish_copy_state()
+            state.random_mutation(1)
+            state.img_to_array()
 
-            james.calculate_fitness_mse(self.goalpx)
+            state.calculate_fitness_mse(self.goalpx)
 
 
-            dE = james.fitness - self.current.fitness
+            dE = state.fitness - self.current.fitness
             T = self.cooling_geman(i)
 
             acceptance = self.acceptance_probability(dE, T)
 
             if random() < acceptance:
-                self.current.genome = james.deepish_copy_genome()
-                self.current.fitness = james.fitness
+                self.current.genome = state.deepish_copy_state()
+                self.current.fitness = state.fitness
 
             if self.current.fitness < self.best.fitness:
                 self.best = copy.deepcopy(self.current)
@@ -159,7 +159,7 @@ class PPA(Algorithm):
         for i in range(self.pop_size):
             alex = o.Organism(0, i, None, self.w, self.h)
             alex.initialize_genome(self.num_poly, self.num_vertex)
-            alex.genome_to_array()
+            alex.img_to_array()
             alex.calculate_fitness_mse(self.goalpx)
             self.pop.add_organism(alex)
 
@@ -179,13 +179,13 @@ class PPA(Algorithm):
         counter = 0
         for organism in self.pop.organisms[:]:
             for i in range(organism.nr):
-                james = o.Organism(gen, counter, organism.name(), self.w, self.h)
-                james.genome = organism.deepish_copy_genome()
-                james.random_mutation(organism.d)
-                james.genome_to_array()
-                james.calculate_fitness_mse(self.goalpx)
+                state = o.Organism(gen, counter, organism.name(), self.w, self.h)
+                state.polygons = organism.deepish_copy_state()
+                state.random_mutation(organism.d)
+                state.img_to_array()
+                state.calculate_fitness_mse(self.goalpx)
 
-                self.pop.add_organism(james)
+                self.pop.add_organism(state)
                 counter += 1
 
         self.evaluations += counter

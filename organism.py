@@ -1,53 +1,36 @@
+'''
+File containing functionality for storing individual states. Namely,
+a set of polygons and corresponding colors that form the solution.
+Additionally, functionality for performing mutations to those states and
+to calculate fitness and error scores can be found here.
+'''
+
+# importing external libraries
 import numpy as np
 from math import ceil
-from copy import deepcopy
 from PIL import Image, ImageDraw
-# import cairocffi as cairo
 from skimage.measure import compare_ssim as ssim
 from random import randint, choice, random
-from numba import njit, jit
-import time
+from numba import njit
+import os
 
-# function has to live outside of the class to be jitted
-@njit
-def mse(a, b):
-    out = 0
-    for i in range(a.shape[0]):
-        for j in range(a.shape[1]):
-            for k in range(a.shape[2]):
-                out += (a[i][j][k] - b[i][j][k]) ** 2
-
-    out /= (a.shape[0]*a.shape[1])
-    return out
 
 class Organism():
+    '''Data structure class that holds a solution state and functionality to
+    mutate or calculate its scores.'''
     def __init__(self, generation, c, parent, w, h):
         self.generation = generation
         self.id = c
         self.parent = parent
         self.w = w
         self.h = h
-        self.genome = []
+        self.polygons = []
         self.array = []
         self.fitness = 0
         self.scaled_fitness = 0
         self.Nx = 0
         self.nr = 0
         self.d = 0
-
-    def deepish_copy_genome(self):
-        # homemade deepcopy
-        newgenome = []
-
-        for gene in self.genome:
-            newpoly = []
-            for vertex in gene[0]:
-                newpoly.append((vertex + tuple()))
-            newcol = gene[1] + tuple()
-            newgene = (newpoly, newcol)
-            newgenome.append(newgene)
-
-        return newgenome
 
     def initialize_random_vertices(self, V_p, V_tot):
         '''Does the same as initialize_genome only ensures all polygons have V_p
@@ -71,92 +54,21 @@ class Organism():
                      randint(0, 255),
                      randint(0, 255))
             # Add polygon data to final combination
-            gene = (poly, color)
-            self.genome.append(gene)
-
-    # first 150 vertices have been devided over genomesize polygons, ensuring each polygon is at least a triangle
-    # remaining vertices are randomly distributed over the polygons
-
-    def initialize_genome(self, genomesize, numvertex):
-        # sets a random genome for an organism
-        for i in range(0, genomesize):
-            poly = []
-            for i in range(0,3):
-                xy = (randint(0, self.w),randint(0,self.h))
-                poly.append(xy)
-            # random rgba tuple 11-09 HARDCODED LOW ALPHA VALUE
-            color = (randint(0,255),randint(0,255),randint(0,255),randint(0,255))
-            # color = (random(),random(),random(),random())
-            gene = (poly, color)
-            self.genome.append(gene)
-
-        vertices_remaining = numvertex - (genomesize * 3)
-        for i in range(0, vertices_remaining):
-            j = randint(0, len(self.genome) - 1)
-            xy = (randint(0,self.w),randint(0,self.h))
-            self.genome[j][0].append(xy)
-
-        # first 150 vertices have been devided over genomesize polygons, ensuring each polygon is at least a triangle
-        # remaining vertices are randomly distributed over the polygons
-    def name(self):
-        return "{:0>6}".format(self.generation) + "-" + "{:0>3}".format(self.id)
-
-    def genome_to_array(self):
-        img = Image.new('RGB', (self.w, self.h), color = (0,0,0))
-        drw = ImageDraw.Draw(img, 'RGBA')
-
-        for gene in self.genome:
-            polygon = gene[0]
-            color = gene[1]
-
-            drw.polygon(polygon, color)
-
-        self.array = np.array(img)
-
-    def genome_to_array_cairo(self):
-        surface = cairo.ImageSurface(cairo.FORMAT_RGB24, self.w, self.h)
-        ctx = cairo.Context(surface)
-
-        ctx.set_source_rgb(0, 0, 0)
-        ctx.paint()
-
-        for gene in self.genome:
-            ctx.move_to(gene[0][0][0], gene[0][0][1])
-            for xy in gene[0][1:]:
-                ctx.line_to(xy[0], xy[1])
-            #ctx.close_path()
-            color = gene[1]
-            col = tuple(cl/255 for cl in color)
-            ctx.set_source_rgba(*col)
-            ctx.stroke()
-
-        buf = surface.get_data()
-
-        a = np.frombuffer(buf, np.uint8)
-        a.shape = (self.h, self.w, 4)
-        a = a[:,:,:3]
-
-        self.array = a
-
-    # def calculate_fitness_mse(self, goal):
-    #     # calculates mean square error image difference (lower = more similar)
-    #     mse = np.sum((self.array.astype("float") - goal.astype("float")) ** 2)
-    #     mse /= float(self.array.shape[0] * self.array.shape[1])
-    #     # error = np.square(goal - self.array).mean(axis = None)
-
-    #     self.fitness = mse
+            polygon = (poly, color)
+            self.polygons.append(polygon)
 
     def calculate_fitness_mse(self, goal):
-        # calls jitted MSE function declared above this class definition
+        '''Calculates the mse between current state and goal.'''
         self.fitness = mse(self.array, goal)
 
     def calculate_fitness_ssim(self, goal):
-        # calculates structural similarity index image difference (higher = more similar)
+        '''Calculates the structural similarity index image difference between
+        current state and goal. (higher = more similar)'''
         ssim_index = ssim(self.array, goal, multichannel = True)
         self.fitness = ssim_index
 
     def scale_fitness(self, minimum, maximum):
-        # GIVES A PROBLEM IF MIN = MAX
+        '''Scales the fitness to be represented between 0 and 1.'''
         self.scaled_fitness = (self.fitness - minimum) / (maximum - minimum)
 
     def calculate_runners(self, nmax, mmax):
@@ -170,56 +82,64 @@ class Organism():
         self.nr = int(ceil(nmax * self.Nx * r))
         self.d = int(ceil(mmax * (1 - self.Nx) * r))
 
+    ######################################################
+    # Mutations
+    ######################################################
+
     def random_mutation(self, number):
-        # performs number random mutations
-        # note: function names of all available mutations have to be hardcoded in list 'options' below
-        options = [self.gene_jump,
+        '''Performs a number of random mutations on the current stateself.
+
+        params:
+        - number: int, number of mutations to perform.'''
+        options = [self.draw_order_change,
                    self.move_vertex,
-                   # self.transfer_vertex,
-                   self.change_color]
+                   self.change_color  # ,
+
+                   # this options is commented as it changes the vertices a polygon has.
+                   # self.transfer_vertex
+                   ]
 
         for i in range(0, number):
             mutation = choice(options)
             mutation()
 
-    def gene_jump(self):
-        # moves a polygon in the genome, changing the drawing order
-        i = randint(0, len(self.genome) - 1)
-        j = randint(0, len(self.genome) - 1)
+    def draw_order_change(self):
+        '''Changing the drawing order of a randomly selected polygon.'''
+        i = randint(0, len(self.polygons) - 1)
+        j = randint(0, len(self.polygons) - 1)
 
-        gene = self.genome[i]
-        del self.genome[i]
-        self.genome.insert(j, gene)
-        # TODO how does the insertion change the index of the other polygons in the list
+        polygon = self.polygons[i]
+        del self.polygons[i]
+        self.polygons.insert(j, polygon)
 
     def move_vertex(self):
-        # change a (x, y) coord of a vertex of a random generation
+        '''Çhange the location of a randomly selected vertex.'''
         xy = (randint(0,self.w), randint(0,self.h))
-        i = randint(0, len(self.genome) - 1)
-        v = randint(0, len(self.genome[i][0]) - 1)
-        self.genome[i][0][v] = xy
+        i = randint(0, len(self.polygons) - 1)
+        v = randint(0, len(self.polygons[i][0]) - 1)
+        self.polygons[i][0][v] = xy
 
     def transfer_vertex(self):
-        # transfers a vertex from polygon i to polygon y
-        # places the vertex on a line of receiving polygon to NOT change its shape right away
+        '''Transfer a randomly selected vertex from one polygon to a random
+        other one.'''
         giver = 0
         receiver = 0
 
         # ensure different indexes and ensure that the giver has > 3 vertices
         while True:
-            giver = randint(0, len(self.genome) - 1)
-            receiver = randint(0, len(self.genome) - 1)
-            if giver != receiver and len(self.genome[giver][0]) > 3:
+            giver = randint(0, len(self.polygons) - 1)
+            receiver = randint(0, len(self.polygons) - 1)
+            if giver != receiver and len(self.polygons[giver][0]) > 3:
                 break
 
         # pick a vertex from the giver and delete it
-        n = randint(0, len(self.genome[giver][0]) - 1)
-        del self.genome[giver][0][n]
+        n = randint(0, len(self.polygons[giver][0]) - 1)
+        del self.polygons[giver][0][n]
 
         # pick two neighbouring vertices from the receiver and interpolate a new (x,y) coordinate between them
-        i = randint(0,len(self.genome[receiver][0]) - 2)
-        xy1 = self.genome[receiver][0][i]
-        xy2 = self.genome[receiver][0][i + 1]
+        i = randint(0,len(self.polygons[receiver][0]) - 2)
+        xy1 = self.polygons[receiver][0][i]
+        xy2 = self.polygons[receiver][0][i + 1]
 
         # calculate the slope of the line between xy1 and xy2
         slope = (xy1[1] - xy2[1]) / (xy1[0] - xy2[0] + 0.00001)
@@ -235,54 +155,138 @@ class Organism():
             y = int(round(dx * slope)) + xy2[1]
 
         xy_new = (x, y)
-        self.genome[receiver][0].insert(i + 1, xy_new)
+        self.polygons[receiver][0].insert(i + 1, xy_new)
 
     def change_color(self):
-        # changes one channel of the color (or the alpha) of a random polygon
-        i = randint(0, len(self.genome) - 1)
+        '''changes the color (or the alpha) of a random polygon.'''
+        i = randint(0, len(self.polygons) - 1)
         j = randint(0, 4)
 
         if j == 0:
-            color = (randint(0,255), self.genome[i][1][1],self.genome[i][1][2], self.genome[i][1][3])
+            color = (randint(0, 255), self.polygons[i][1][1],
+                     self.polygons[i][1][2], self.polygons[i][1][3])
         elif j == 1:
-            color = (self.genome[i][1][0], randint(0,255),self.genome[i][1][2], self.genome[i][1][3])
+            color = (self.polygons[i][1][0], randint(0, 255),
+                     self.polygons[i][1][2], self.polygons[i][1][3])
         elif j == 2:
-            color = (self.genome[i][1][0], self.genome[i][1][1], randint(0,255), self.genome[i][1][3])
+            color = (self.polygons[i][1][0], self.polygons[i][1][1],
+                     randint(0, 255), self.polygons[i][1][3])
         else:
-            color = self.genome[i][1][0], self.genome[i][1][1], self.genome[i][1][2], randint(0,255)
-        new_gene = (self.genome[i][0], color)
-        self.genome[i] = new_gene
+            color = (self.polygons[i][1][0], self.polygons[i][1][1],
+                     self.polygons[i][1][2], randint(0, 255))
+        new_gene = (self.polygons[i][0], color)
+        self.polygons[i] = new_gene
 
+    ######################################################
+    # Helpers
+    ######################################################
     def save_img(self, directory):
-        filename = directory + "/" + "{:0>6}".format(self.generation) + "-" + "{:0>3}".format(self.id) + "-" + str(self.fitness) + ".png"
+        '''Store an image of the current state'''
+        img_name = ("{:0>6}".format(self.generation) + "-" +
+                    "{:0>3}".format(self.id) + "-" + str(self.fitness) +
+                    ".png")
+        filename = os.path.join(directory, img_name)
         im = Image.fromarray(self.array)
         im.save(filename)
 
     def save_polygons(self, directory):
-        filename = directory + "/" + "{:0>6}".format(self.generation) + "-" + "{:0>3}".format(self.id) + "-" + str(self.fitness) + ".txt"
-
+        '''Store polygon data of the current state'''
+        pol_name = ("{:0>6}".format(self.generation) + "-" +
+                    "{:0>3}".format(self.id) + "-" + str(self.fitness) +
+                    ".txt")
+        filename = os.path.join(directory, pol_name)
         with open(filename, 'w') as f:
-            for poly in self.genome:
+            for poly in self.polygons:
                     f.write(str(poly) + '\n')
 
-    def save_img_vectorized(self):
-        surface = cairo.SVGSurface('test.svg', self.w, self.h)
-        ctx = cairo.Context(surface)
+    def name(self):
+        return "{:0>6}".format(self.generation) + "-" + "{:0>3}".format(self.id)
 
-        ctx.set_source_rgb(0, 0, 0)
-        ctx.paint()
+    def img_to_array(self):
+        '''Casts image to a numpy array.'''
+        img = Image.new('RGB', (self.w, self.h), color=(0, 0, 0))
+        drw = ImageDraw.Draw(img, 'RGBA')
 
-        for gene in self.genome:
-            ctx.move_to(gene[0][0][0], gene[0][0][1])
-            for xy in gene[0][1:]:
-                ctx.line_to(xy[0], xy[1])
-            ctx.close_path()
-            color = gene[1]
-            col= tuple(cl/255 for cl in color)
-            ctx.set_source_rgba(*col)
-            ctx.fill()
+        for polygon in self.polygons:
+            color = polygon[1]
+            vertices = polygon[0]
+            drw.polygon(vertices, color)
 
-        surface.finish()
+        self.array = np.array(img)
+
+    def deepish_copy_state(self):
+        '''Create and return a copy of the current state.'''
+        new_state = []
+
+        for polygon in self.polygons:
+            newpoly = []
+            for vertex in polygon[0]:
+                newpoly.append((vertex + tuple()))
+            newcol = polygon[1] + tuple()
+            new_poly = (newpoly, newcol)
+            new_state.append(new_poly)
+
+        return new_state
+
+
+# mse function has to live outside of the class to be jitted
+@njit
+def mse(a, b):
+    out = 0
+    for i in range(a.shape[0]):
+        for j in range(a.shape[1]):
+            for k in range(a.shape[2]):
+                out += (a[i][j][k] - b[i][j][k]) ** 2
+
+    out /= (a.shape[0]*a.shape[1])
+    return out
+
+############################################################################
+# import cairocffi as cairo
+    #
+    # def genome_to_array_cairo(self):
+    #     surface = cairo.ImageSurface(cairo.FORMAT_RGB24, self.w, self.h)
+    #     ctx = cairo.Context(surface)
+    #
+    #     ctx.set_source_rgb(0, 0, 0)
+    #     ctx.paint()
+    #
+    #     for polygon in self.polygons:
+    #         ctx.move_to(polygon[0][0][0], polygon[0][0][1])
+    #         for xy in polygon[0][1:]:
+    #             ctx.line_to(xy[0], xy[1])
+    #         #ctx.close_path()
+    #         color = polygon[1]
+    #         col = tuple(cl/255 for cl in color)
+    #         ctx.set_source_rgba(*col)
+    #         ctx.stroke()
+    #
+    #     buf = surface.get_data()
+    #
+    #     a = np.frombuffer(buf, np.uint8)
+    #     a.shape = (self.h, self.w, 4)
+    #     a = a[:,:,:3]
+    #
+    #     self.array = a
+
+    # def save_img_vectorized(self):
+    #     surface = cairo.SVGSurface('test.svg', self.w, self.h)
+    #     ctx = cairo.Context(surface)
+    #
+    #     ctx.set_source_rgb(0, 0, 0)
+    #     ctx.paint()
+    #
+    #     for polygon in self.polygons:
+    #         ctx.move_to(polygon[0][0][0], polygon[0][0][1])
+    #         for xy in polygon[0][1:]:
+    #             ctx.line_to(xy[0], xy[1])
+    #         ctx.close_path()
+    #         color = polygon[1]
+    #         col= tuple(cl/255 for cl in color)
+    #         ctx.set_source_rgba(*col)
+    #         ctx.fill()
+    #
+    #     surface.finish()
 
 # im_goal = Image.open("starry-night-498-402.jpg")
 # goal = np.array(im_goal)
@@ -303,12 +307,12 @@ class Organism():
 #alex.initialize_genome(50, 200)
 #alex.save_polygons("test")
 
-# alex.genome_to_array()
+# alex.img_to_array()
 # alex.save_img()
 # alex.save_img_vectorized()
 
 
-# # alex.genome_to_array()
+# # alex.img_to_array()
 # # alex.calculate_fitness_mse(goal)
 # # alex.save_img()
 # # print(alex.fitness)
