@@ -42,7 +42,7 @@ def init_datafile(datafile):
 
 def solver_select(painting, algorithm, V_total, V_polygon,
                   savepoints, outdir, iterations,
-                  population_size, nmax, stepsize, EMM="MSE"):
+                  population_size, nmax, stepsize=0, EMM="MSE"):
     '''intializes a solver class according to the selected algorithm and
     error measurement method.'''
     # Set goal for algorithm
@@ -61,13 +61,9 @@ def solver_select(painting, algorithm, V_total, V_polygon,
                          mmax)
 
     elif algorithm == "HC":
-        if stepsize > 0:
-            solver = alg.Hillclimber(goal, w, h, V_total / V_polygon, V_total,
-                                     EMM, savepoints, outdir, iterations,
-                                     stepsize)
-        else:
-            solver = alg.Hillclimber(goal, w, h, V_total / V_polygon, V_total,
-                                     EMM, savepoints, outdir, iterations)
+        solver = alg.Hillclimber(goal, w, h, V_total / V_polygon, V_total,
+                                 EMM, savepoints, outdir, iterations,
+                                 stepsize)
 
     elif algorithm == "SA":
         solver = alg.SA(goal, w, h, V_total / V_polygon, V_total, EMM,
@@ -126,7 +122,9 @@ def experiment(name, algorithm, paintings, repetitions, V_total, iterations,
                         temp[-1] = str(int(temp[-1]) + 1)
                         outdir = '_'.join(temp)
                     os.makedirs(outdir)
-                    os.makedirs(os.path.join(outdir, 'Checkpoints'))
+                    # Make Checkpoints directory if storing MSE-checkpoints
+                    if stepsize > 0:
+                        os.makedirs(os.path.join(outdir, 'MSE_checkpoints'))
 
                     # run the solver with selected algorithm
                     solver = solver_select(painting, algorithm, V_tot,

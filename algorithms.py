@@ -64,7 +64,7 @@ class Hillclimber(Algorithm):
     adaptations to those states moving closer to the optimal solution.
     Additionally it uses the Algorithm class to record the running data.'''
     def __init__(self, goal, w, h, num_poly, num_vertex, comparison_method,
-                 savepoints, outdirectory, iterations, stepsize=100):
+                 savepoints, outdirectory, iterations, stepsize):
         # Initialize Algorithm class
         super().__init__(goal, w, h, num_poly, num_vertex, comparison_method,
                          savepoints, outdirectory, stepsize)
@@ -104,12 +104,14 @@ class Hillclimber(Algorithm):
                 self.save_data([int(self.num_poly), i,
                                 round(self.best.fitness, 2)])
 
-            # Store data per MSE improvement (for better movies etc.)
-            if self.best.fitness <= self.check_point:
-                self.best.save_img(self.checks_out)
-                self.best.save_polygons(self.checks_out)
-                while self.best.fitness <= self.check_point:
-                    self.check_point -= self.stepsize
+            # If checkpoint stepsize is given store checkpoints
+            if self.stepsize > 0:
+                # Store data per MSE improvement (for better movies etc.)
+                if self.best.fitness <= self.check_point:
+                    self.best.save_img(self.checks_out)
+                    self.best.save_polygons(self.checks_out)
+                    while self.best.fitness <= self.check_point:
+                        self.check_point -= self.stepsize
 
 
         self.best.save_img(self.outdirectory)
