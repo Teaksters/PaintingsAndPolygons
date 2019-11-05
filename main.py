@@ -14,13 +14,8 @@ V_total = [60, 300, 600]
 V_polygon = [3, 4, 5, 6]
 # V_total = [60, 120, 180, 240, 300, 600]
 iterations = 10000
-# define a list of savepoints, more in the first part of the run, and less later.
 
 names = [p.split('/')[1].split('-')[0] for p in paintings]
-
-# experiment(name, "HC" paintins, repetitions, V_total, iterations, savepoints)
-
-# parallelize stuff
 
 if __name__ == '__main__':
     worker_count = 1

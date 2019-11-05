@@ -1,11 +1,14 @@
-import algorithms as alg
 
+# Import external libraries
 import csv
 from PIL import Image
 import numpy as np
 import os
 import time
 import math
+
+# Import custom libraries
+import algorithms as alg
 
 
 def log_test_statistics(logfile, name, now,
@@ -111,6 +114,11 @@ def experiment(name, algorithm, paintings, repetitions, V_total, iterations,
                     # make a directory to contain iteration data + images
                     n = n + "_" + str(repetition)
                     outdir = os.path.join(folder, n)
+                    # Update outdir to evade current existing results
+                    while os.path.exists(outdir):
+                        temp = outdir.split('_')
+                        temp[-1] = str(int(temp[-1]) + 1)
+                        outdir = '_'.join(temp)
                     os.makedirs(outdir)
 
                     # run the solver with selected algorithm

@@ -1,15 +1,34 @@
+'''
+Code for heuristic solver algorithms can be found here, including a
+supporting datastructure, the Algorithm class. Which handles the data and its
+storage. This class is used by the heuristic classes to create solutions.
+The following heuristic solvers are implemented:
+
+Hillclimber - Sometimes also referred to as Local Search algorithm.
+Simulated Annealing (SA) - Hillclimber with chance to accept deteriorations in
+scores depending on a temperature variable.
+Plan Propagation Algorithm (PPA) - A genetic algorithm managing its population
+based on plant propagation models.
+'''
+
+
+# Import external libraries
 import copy
 import numpy as np
 import math
-from PIL import Image, ImageOps
 import random
 import csv
+import os
 
-import organism as o
+# Import custom libraries
+import constellation as c
 import population as p
 
 class Algorithm():
-    def __init__(self, goal, w, h, num_poly, num_vertex, comparison_method, savepoints, outdirectory):
+    '''Datastructure holding the data for the goal image and is responsible for
+    storing the data received during the running of heuristic methods.'''
+    def __init__(self, goal, w, h, num_poly, num_vertex, comparison_method,
+                 savepoints, outdirectory):
         self.goal = goal
         self.goalpx = np.array(goal)
         self.w = w
@@ -22,40 +41,46 @@ class Algorithm():
         self.outdirectory = outdirectory
 
     def save_data(self, row):
-        # function to be called every generation to remember data on that generation
+        '''function to be called every safepoint to store running data of that
+        iteration'''
         self.data.append(row)
 
     def write_data(self):
-        # writes all collected data to a file
-        with open(self.outdirectory + '/data.csv', 'a', newline='') as f:
+        '''writes all collected running data to a file'''
+        file = os.path.join(self.outdirectory, 'data.csv')
+        with open(file, 'a', newline='') as f:
             writer = csv.writer(f)
             for row in self.data:
                 writer.writerow(row)
 
-class Hillclimber(Algorithm):
 
+class Hillclimber(Algorithm):
+    '''Hillclimber class used for running a hillclimbing solver algorithm capped
+    by iterations. Uses the Constellation class to store states and do
+    adaptations to those states moving closer to the optimal solution.
+    Additionally it uses the Algorithm class to record the running data.'''
     def __init__(self, goal, w, h, num_poly, num_vertex, comparison_method,
                  savepoints, outdirectory, iterations):
+        # Initialize Algorithm class
         super().__init__(goal, w, h, num_poly, num_vertex, comparison_method,
                          savepoints, outdirectory)
         self.iterations = iterations
 
-        # initializing organism
-        self.best = o.Organism(0, 0, None, self.w, self.h)
+        # initializing solution datastructure
+        self.best = c.Constellation(0, 0, None, self.w, self.h)
         self.best.initialize_random_vertices(int(num_vertex / num_poly),
                                              num_vertex)
-        # self.best.initialize_genome(self.num_poly, num_vertex)
         self.best.img_to_array()
         self.best.calculate_fitness_mse(self.goalpx)
 
         # define data header for hillclimber
-        self.data.append(["Polygons", "Generation", "MSE"])
+        self.data.append(["Polygons", "Iteration", "MSE"])
 
     def run(self):
-        for i in range(0, self.iterations):
+        for i in range(self.iterations):
             if i % 100 == 0:
                 print(i)
-            state = o.Organism(0, 0, None, self.w, self.h)
+            state = c.Constellation(0, 0, None, self.w, self.h)
             state.polygons = self.best.deepish_copy_state()
             state.id = i
             state.random_mutation(1)
@@ -66,20 +91,25 @@ class Hillclimber(Algorithm):
 
             if state.fitness <= self.best.fitness:
                 self.best = copy.deepcopy(state)
-                # print(self.best.fitness)
-                # best.save_img()
 
             if i in self.savepoints:
                 self.best.save_img(self.outdirectory)
                 self.best.save_polygons(self.outdirectory)
-                self.save_data([self.num_poly, i, self.best.fitness])
+                self.save_data([int(self.num_poly), i,
+                                round(self.best.fitness, 2)])
 
         self.best.save_img(self.outdirectory)
         self.best.save_polygons(self.outdirectory)
-        self.save_data([self.num_poly, i, self.best.fitness])
+        self.save_data([int(self.num_poly), i, round(self.best.fitness, 2)])
 
 class SA(Algorithm):
-    # https://am207.github.io/2017/wiki/lab4.html
+    '''Simulated Annealing class used for running a hillclimbing solver
+    algorithm capped by iterations. Uses the Constellation class to store
+    states and do adaptations to those states moving closer to the optimal
+    solution. Additionally it uses the Algorithm class to record the running
+    data.
+
+    source: https://am207.github.io/2017/wiki/lab4.html'''
     def __init__(self, goal, w, h, num_poly, num_vertex, comparison_method,
                  savepoints, outdirectory, iterations):
         super().__init__(goal, w, h, num_poly, num_vertex, comparison_method,
@@ -87,7 +117,7 @@ class SA(Algorithm):
         self.iterations = iterations
 
         # initializing organism
-        self.best = o.Organism(0, 0, None, self.w, self.h)
+        self.best = c.Constellation(0, 0, None, self.w, self.h)
         self.best.initialize_genome(self.num_poly, num_vertex)
         self.best.img_to_array()
         self.best.calculate_fitness_mse(self.goalpx)
@@ -95,15 +125,18 @@ class SA(Algorithm):
         self.current = copy.deepcopy(self.best)
 
         # define data header for SA
-        self.data.append(["Polygons", "Generation", "bestMSE", "currentMSE"])
+        self.data.append(["Polygons", "Iteration", "bestMSE", "currentMSE"])
 
 
     def acceptance_probability(self, dE, T):
+        '''Returns the acceptance probability given T (Temperature) and
+        dE (difference in score.)'''
         return math.exp(-dE/T)
 
     def cooling_geman(self, i):
-        # what to pick for C?
-        # d is usually set to one according to Nourani & Andresen (1998)
+        '''Returns temperature given current iteration.
+        Remaining question: What to pick for C?
+        d is usually set to one according to Nourani & Andresen (1998)'''
         c = 195075
         d = 1
 
@@ -111,7 +144,7 @@ class SA(Algorithm):
 
     def run(self):
         for i in range(1, self.iterations):
-            state = o.Organism(0, i, None, self.w, self.h)
+            state = c.Constellation(0, i, None, self.w, self.h)
             state.polygons = self.current.deepish_copy_state()
             state.random_mutation(1)
             state.img_to_array()
@@ -157,7 +190,7 @@ class PPA(Algorithm):
 
         # fill population with random polygon drawings
         for i in range(self.pop_size):
-            alex = o.Organism(0, i, None, self.w, self.h)
+            alex = c.Constellation(0, i, None, self.w, self.h)
             alex.initialize_genome(self.num_poly, self.num_vertex)
             alex.img_to_array()
             alex.calculate_fitness_mse(self.goalpx)
@@ -179,7 +212,7 @@ class PPA(Algorithm):
         counter = 0
         for organism in self.pop.organisms[:]:
             for i in range(organism.nr):
-                state = o.Organism(gen, counter, organism.name(), self.w, self.h)
+                state = c.Constellation(gen, counter, organism.name(), self.w, self.h)
                 state.polygons = organism.deepish_copy_state()
                 state.random_mutation(organism.d)
                 state.img_to_array()

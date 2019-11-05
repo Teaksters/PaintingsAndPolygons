@@ -15,7 +15,7 @@ from numba import njit
 import os
 
 
-class Organism():
+class Constellation():
     '''Data structure class that holds a solution state and functionality to
     mutate or calculate its scores.'''
     def __init__(self, generation, c, parent, w, h):
@@ -240,85 +240,3 @@ def mse(a, b):
 
     out /= (a.shape[0]*a.shape[1])
     return out
-
-############################################################################
-# import cairocffi as cairo
-    #
-    # def genome_to_array_cairo(self):
-    #     surface = cairo.ImageSurface(cairo.FORMAT_RGB24, self.w, self.h)
-    #     ctx = cairo.Context(surface)
-    #
-    #     ctx.set_source_rgb(0, 0, 0)
-    #     ctx.paint()
-    #
-    #     for polygon in self.polygons:
-    #         ctx.move_to(polygon[0][0][0], polygon[0][0][1])
-    #         for xy in polygon[0][1:]:
-    #             ctx.line_to(xy[0], xy[1])
-    #         #ctx.close_path()
-    #         color = polygon[1]
-    #         col = tuple(cl/255 for cl in color)
-    #         ctx.set_source_rgba(*col)
-    #         ctx.stroke()
-    #
-    #     buf = surface.get_data()
-    #
-    #     a = np.frombuffer(buf, np.uint8)
-    #     a.shape = (self.h, self.w, 4)
-    #     a = a[:,:,:3]
-    #
-    #     self.array = a
-
-    # def save_img_vectorized(self):
-    #     surface = cairo.SVGSurface('test.svg', self.w, self.h)
-    #     ctx = cairo.Context(surface)
-    #
-    #     ctx.set_source_rgb(0, 0, 0)
-    #     ctx.paint()
-    #
-    #     for polygon in self.polygons:
-    #         ctx.move_to(polygon[0][0][0], polygon[0][0][1])
-    #         for xy in polygon[0][1:]:
-    #             ctx.line_to(xy[0], xy[1])
-    #         ctx.close_path()
-    #         color = polygon[1]
-    #         col= tuple(cl/255 for cl in color)
-    #         ctx.set_source_rgba(*col)
-    #         ctx.fill()
-    #
-    #     surface.finish()
-
-# im_goal = Image.open("starry-night-498-402.jpg")
-# goal = np.array(im_goal)
-
-
-# # start = time.time()
-
-# # for i in range(0, 100):
-# #     alex = Organism(i, 2, "test", 498, 402)
-# #     alex.initialize_genome(50, 400)
-# #     alex.genome_to_array_cairo()
-
-# # end = time.time()
-
-# # print(end - start)
-
-#alex = Organism(1, 2, "test", 498, 402)
-#alex.initialize_genome(50, 200)
-#alex.save_polygons("test")
-
-# alex.img_to_array()
-# alex.save_img()
-# alex.save_img_vectorized()
-
-
-# # alex.img_to_array()
-# # alex.calculate_fitness_mse(goal)
-# # alex.save_img()
-# # print(alex.fitness)
-
-# # alex.genome_to_array_cairo()
-
-# # alex.calculate_fitness_mse(goal)
-# # alex.save_img()
-# # print(alex.fitness)
