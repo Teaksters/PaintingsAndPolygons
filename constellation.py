@@ -26,7 +26,7 @@ class Constellation():
         self.h = h
         self.polygons = []
         self.array = []
-        self.fitness = 0
+        self.fitness = float('inf')
         self.scaled_fitness = 0
         self.Nx = 0
         self.nr = 0
@@ -64,7 +64,7 @@ class Constellation():
     def calculate_fitness_ssim(self, goal):
         '''Calculates the structural similarity index image difference between
         current state and goal. (higher = more similar)'''
-        ssim_index = ssim(self.array, goal, multichannel = True)
+        ssim_index = ssim(self.array, goal, multichannel=True)
         self.fitness = ssim_index
 
     def scale_fitness(self, minimum, maximum):
@@ -183,8 +183,8 @@ class Constellation():
     def save_img(self, directory):
         '''Store an image of the current state'''
         img_name = ("{:0>6}".format(self.generation) + "-" +
-                    "{:0>3}".format(self.id) + "-" + str(self.fitness) +
-                    ".png")
+                    "{:0>3}".format(self.id) + "-" +
+                    str(int(round(self.fitness, 0))) + ".png")
         filename = os.path.join(directory, img_name)
         im = Image.fromarray(self.array)
         im.save(filename)
@@ -192,8 +192,8 @@ class Constellation():
     def save_polygons(self, directory):
         '''Store polygon data of the current state'''
         pol_name = ("{:0>6}".format(self.generation) + "-" +
-                    "{:0>3}".format(self.id) + "-" + str(self.fitness) +
-                    ".txt")
+                    "{:0>3}".format(self.id) + "-" +
+                    str(int(round(self.fitness, 0))) + ".txt")
         filename = os.path.join(directory, pol_name)
         with open(filename, 'w') as f:
             for poly in self.polygons:

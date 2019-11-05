@@ -42,7 +42,7 @@ def init_datafile(datafile):
 
 def solver_select(painting, algorithm, V_total, V_polygon,
                   savepoints, outdir, iterations,
-                  population_size, nmax, EMM="MSE"):
+                  population_size, nmax, stepsize, EMM="MSE"):
     '''intializes a solver class according to the selected algorithm and
     error measurement method.'''
     # Set goal for algorithm
@@ -61,8 +61,13 @@ def solver_select(painting, algorithm, V_total, V_polygon,
                          mmax)
 
     elif algorithm == "HC":
-        solver = alg.Hillclimber(goal, w, h, V_total / V_polygon, V_total, EMM,
-                                 savepoints, outdir, iterations)
+        if stepsize > 0:
+            solver = alg.Hillclimber(goal, w, h, V_total / V_polygon, V_total,
+                                     EMM, savepoints, outdir, iterations,
+                                     stepsize)
+        else:
+            solver = alg.Hillclimber(goal, w, h, V_total / V_polygon, V_total,
+                                     EMM, savepoints, outdir, iterations)
 
     elif algorithm == "SA":
         solver = alg.SA(goal, w, h, V_total / V_polygon, V_total, EMM,
@@ -71,7 +76,8 @@ def solver_select(painting, algorithm, V_total, V_polygon,
 
 
 def experiment(name, algorithm, paintings, repetitions, V_total, iterations,
-               savepoints, V_polygon, population_size=30, nmax=5):
+               savepoints, V_polygon, stepsize=0,
+               population_size=30, nmax=5):
     # get date/time
     now = time.strftime("%c")
 
@@ -120,11 +126,13 @@ def experiment(name, algorithm, paintings, repetitions, V_total, iterations,
                         temp[-1] = str(int(temp[-1]) + 1)
                         outdir = '_'.join(temp)
                     os.makedirs(outdir)
+                    os.makedirs(os.path.join(outdir, 'Checkpoints'))
 
                     # run the solver with selected algorithm
                     solver = solver_select(painting, algorithm, V_tot,
                                            V_pol, savepoints, outdir,
-                                           iterations, population_size, nmax)
+                                           iterations, population_size, nmax,
+                                           stepsize)
                     solver.run()
                     solver.write_data()
 

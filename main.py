@@ -9,6 +9,7 @@ paintings = [os.path.join(source_folder, f) for f in os.listdir(source_folder)]
 
 # Estimate adequate safepoints for later analysis of data
 savepoints = list(range(0, 250000, 1000)) + list(range(250000, 1000000, 10000))
+stepsize = 100
 repetitions = 1
 V_total = [60, 300, 600]
 V_polygon = [3, 4, 5, 6]
@@ -23,6 +24,6 @@ if __name__ == '__main__':
     for i in range(worker_count):
         print(paintings)
         args = (names[i], "HC", paintings, repetitions, V_total, iterations,
-                savepoints, V_polygon)
+                savepoints, V_polygon, stepsize)
         p = mp.Process(target=hlp.experiment, args=args)
         p.start()

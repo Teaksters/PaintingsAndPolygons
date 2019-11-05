@@ -24,11 +24,12 @@ import os
 import constellation as c
 import population as p
 
+
 class Algorithm():
     '''Datastructure holding the data for the goal image and is responsible for
     storing the data received during the running of heuristic methods.'''
     def __init__(self, goal, w, h, num_poly, num_vertex, comparison_method,
-                 savepoints, outdirectory):
+                 savepoints, outdirectory, stepsize):
         self.goal = goal
         self.goalpx = np.array(goal)
         self.w = w
@@ -39,6 +40,9 @@ class Algorithm():
         self.data = []
         self.savepoints = savepoints
         self.outdirectory = outdirectory
+        self.checks_out = os.path.join(self.outdirectory, 'Checkpoints')
+        self.check_point = np.nan
+        self.stepsize = stepsize
 
     def save_data(self, row):
         '''function to be called every safepoint to store running data of that
@@ -60,10 +64,10 @@ class Hillclimber(Algorithm):
     adaptations to those states moving closer to the optimal solution.
     Additionally it uses the Algorithm class to record the running data.'''
     def __init__(self, goal, w, h, num_poly, num_vertex, comparison_method,
-                 savepoints, outdirectory, iterations):
+                 savepoints, outdirectory, iterations, stepsize=100):
         # Initialize Algorithm class
         super().__init__(goal, w, h, num_poly, num_vertex, comparison_method,
-                         savepoints, outdirectory)
+                         savepoints, outdirectory, stepsize)
         self.iterations = iterations
 
         # initializing solution datastructure
@@ -72,6 +76,7 @@ class Hillclimber(Algorithm):
                                              num_vertex)
         self.best.img_to_array()
         self.best.calculate_fitness_mse(self.goalpx)
+        self.check_point = self.best.fitness
 
         # define data header for hillclimber
         self.data.append(["Polygons", "Iteration", "MSE"])
@@ -92,11 +97,20 @@ class Hillclimber(Algorithm):
             if state.fitness <= self.best.fitness:
                 self.best = copy.deepcopy(state)
 
+            # Store data per iteration
             if i in self.savepoints:
                 self.best.save_img(self.outdirectory)
                 self.best.save_polygons(self.outdirectory)
                 self.save_data([int(self.num_poly), i,
                                 round(self.best.fitness, 2)])
+
+            # Store data per MSE improvement (for better movies etc.)
+            if self.best.fitness <= self.check_point:
+                self.best.save_img(self.checks_out)
+                self.best.save_polygons(self.checks_out)
+                while self.best.fitness <= self.check_point:
+                    self.check_point -= self.stepsize
+
 
         self.best.save_img(self.outdirectory)
         self.best.save_polygons(self.outdirectory)
@@ -126,7 +140,6 @@ class SA(Algorithm):
 
         # define data header for SA
         self.data.append(["Polygons", "Iteration", "bestMSE", "currentMSE"])
-
 
     def acceptance_probability(self, dE, T):
         '''Returns the acceptance probability given T (Temperature) and
