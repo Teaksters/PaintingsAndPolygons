@@ -113,7 +113,7 @@ class Constellation():
         self.polygons.insert(j, polygon)
 
     def move_vertex(self):
-        '''Çhange the location of a randomly selected vertex.'''
+        '''Change the location of a randomly selected vertex.'''
         xy = (randint(0,self.w), randint(0,self.h))
         i = randint(0, len(self.polygons) - 1)
         v = randint(0, len(self.polygons[i][0]) - 1)
