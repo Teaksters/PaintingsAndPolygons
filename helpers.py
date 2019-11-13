@@ -6,15 +6,13 @@ import numpy as np
 import os
 import time
 import math
-import subprocess
 
 # Import custom libraries
 import algorithms as alg
 
 
-def log_test_statistics(logfile, name, now,
-                        iterations, paintings, V_tot,
-                        repetitions, total_runs):
+def log_test_statistics(logfile, name, now, iterations, paintings, V_tot,
+                        repetitions, total_runs, V_p):
     '''Writes test statistics to a logfile for later reference.'''
     with open(logfile, 'a') as f:
         f.write("EXPERIMENT " + name + " LOG\n")
@@ -25,6 +23,7 @@ def log_test_statistics(logfile, name, now,
             f.write(painting + "\n")
         f.write("\n")
         f.write("VERTICES " + str(len(V_tot)) + " " + str(V_tot) + "\n\n")
+        f.write("V_PER_POLYGON " + str(len(V_p)) + " " + str(V_p) + "\n\n")
         f.write("REPETITIONS " + str(repetitions) + "\n\n")
         f.write("RESULTING IN A TOTAL OF " + str(total_runs) + " RUNS\n\n")
         f.write("STARTING EXPERIMENT NOW!\n")
@@ -88,11 +87,10 @@ def init_folder_structure(algorithm, paintings, repetitions, V_total,
     name = algorithm
 
     # logging experiment metadata
-    total_runs = (len(V_total) * len(paintings) * repetitions * len(V_total) *
-                  len(V_polygon))
+    total_runs = (len(V_total) * len(paintings) * repetitions * len(V_polygon))
     logfile = os.path.join(main_res_folder, name + "-LOG.txt")
     log_test_statistics(logfile, name, now, iterations, paintings, V_total,
-                        repetitions, total_runs)
+                        repetitions, total_runs, V_polygon)
 
     # initializing the main datafile
     datafile = os.path.join(main_res_folder, name + "-DATA.csv")
