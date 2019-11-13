@@ -83,8 +83,6 @@ class Hillclimber(Algorithm):
 
     def run(self):
         for i in range(self.iterations):
-            if i % 100 == 0:
-                print(i)
             state = c.Constellation(0, 0, None, self.w, self.h)
             state.polygons = self.best.deepish_copy_state()
             state.id = i

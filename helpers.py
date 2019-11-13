@@ -71,9 +71,11 @@ def solver_select(painting, algorithm, V_total, V_polygon,
     return solver
 
 
-def experiment(name, algorithm, paintings, repetitions, V_total, iterations,
-               savepoints, V_polygon, stepsize=0,
-               population_size=30, nmax=5, main_res_folder="Results"):
+def init_folder_structure(algorithm, paintings, repetitions, V_total,
+                          iterations, main_res_folder="Results"):
+    '''Initializes all logging files and folders seperately from experiment
+    allowing for experiment to be parallellized without printing headers again.
+    '''
     # get date/time
     now = time.strftime("%c")
 
@@ -85,7 +87,6 @@ def experiment(name, algorithm, paintings, repetitions, V_total, iterations,
     name = algorithm
 
     # logging experiment metadata
-    current_run = 1
     total_runs = len(V_total) * len(paintings) * repetitions * len(V_total)
     logfile = os.path.join(main_res_folder, name + "-LOG.txt")
     log_test_statistics(logfile, name, now, iterations, paintings, V_total,
@@ -95,6 +96,17 @@ def experiment(name, algorithm, paintings, repetitions, V_total, iterations,
     datafile = os.path.join(main_res_folder, name + "-DATA.csv")
     if not os.path.exists(datafile):
         init_datafile(datafile)
+
+    # Return handles to files for in run data gathering
+    return logfile, datafile
+
+
+def experiment(name, algorithm, paintings, repetitions, V_total, iterations,
+               savepoints, V_polygon, logfile, datafile, stepsize=0,
+               population_size=30, nmax=5, main_res_folder="Results"):
+    # logging experiment metadata
+    current_run = 1
+    total_runs = len(V_total) * len(paintings) * repetitions * len(V_total)
 
     # main experiment, looping through repetitions, vertex numbers, and paintings:
     for painting in paintings:
