@@ -6,6 +6,7 @@ import numpy as np
 import os
 import time
 import math
+import subprocess
 
 # Import custom libraries
 import algorithms as alg
@@ -98,15 +99,13 @@ def init_folder_structure(algorithm, paintings, repetitions, V_total,
         init_datafile(datafile)
 
     # Return handles to files for in run data gathering
-    return logfile, datafile
+    return logfile, datafile, total_runs
 
 
 def experiment(name, algorithm, paintings, repetitions, V_total, iterations,
-               savepoints, V_polygon, logfile, datafile, stepsize=0,
-               population_size=30, nmax=5, main_res_folder="Results"):
-    # logging experiment metadata
-    current_run = 1
-    total_runs = len(V_total) * len(paintings) * repetitions * len(V_total)
+               savepoints, V_polygon, logfile, datafile, total_runs,
+               stepsize=0, worker=1, population_size=30, nmax=5,
+               main_res_folder="Results"):
 
     # main experiment, looping through repetitions, vertex numbers, and paintings:
     for painting in paintings:
@@ -156,6 +155,17 @@ def experiment(name, algorithm, paintings, repetitions, V_total, iterations,
 
                     end = time.time()
                     now = time.strftime("%c")
+
+                    # logging experiment metadata
+                    with open(logfile, 'r') as f:
+                        lines = f.read().splitlines()
+                        last_line = lines[-1]
+                        if len(last_line.split()) < 5:
+                            current_run = 1
+                        else:
+                            current_run = int(last_line.split()[7].split('/')[0]) + 1
+                    f.close()
+
                     with open(logfile, 'a') as f:
                         f.write(str(now) + " finished run " + str(current_run)
                                 + "/" + str(total_runs) + " V_total: " +
@@ -163,4 +173,3 @@ def experiment(name, algorithm, paintings, repetitions, V_total, iterations,
                                 " in " + str(round((end - start)/60, 2)) +
                                 " minutes.\n")
                     f.close()
-                    current_run += 1
