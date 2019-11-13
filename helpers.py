@@ -73,7 +73,7 @@ def solver_select(painting, algorithm, V_total, V_polygon,
 
 
 def init_folder_structure(algorithm, paintings, repetitions, V_total,
-                          iterations, main_res_folder="Results"):
+                          V_polygon, iterations, main_res_folder="Results"):
     '''Initializes all logging files and folders seperately from experiment
     allowing for experiment to be parallellized without printing headers again.
     '''
@@ -88,7 +88,8 @@ def init_folder_structure(algorithm, paintings, repetitions, V_total,
     name = algorithm
 
     # logging experiment metadata
-    total_runs = len(V_total) * len(paintings) * repetitions * len(V_total)
+    total_runs = (len(V_total) * len(paintings) * repetitions * len(V_total) *
+                  len(V_polygon))
     logfile = os.path.join(main_res_folder, name + "-LOG.txt")
     log_test_statistics(logfile, name, now, iterations, paintings, V_total,
                         repetitions, total_runs)
