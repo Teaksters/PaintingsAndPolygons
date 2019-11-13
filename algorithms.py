@@ -40,7 +40,7 @@ class Algorithm():
         self.data = []
         self.savepoints = savepoints
         self.outdirectory = outdirectory
-        self.checks_out = os.path.join(self.outdirectory, 'Checkpoints')
+        self.checks_out = os.path.join(self.outdirectory, 'MSE_checkpoints')
         self.check_point = np.nan
         self.stepsize = stepsize
 

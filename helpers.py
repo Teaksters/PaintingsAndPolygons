@@ -73,12 +73,11 @@ def solver_select(painting, algorithm, V_total, V_polygon,
 
 def experiment(name, algorithm, paintings, repetitions, V_total, iterations,
                savepoints, V_polygon, stepsize=0,
-               population_size=30, nmax=5):
+               population_size=30, nmax=5, main_res_folder="Results"):
     # get date/time
     now = time.strftime("%c")
 
     # create experiment directory with log .txt file
-    main_res_folder = "Results"
     if not os.path.exists(main_res_folder):
         os.makedirs(main_res_folder)
 
