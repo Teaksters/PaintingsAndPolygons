@@ -11,4 +11,4 @@ module load 2019
 module load Python/3.6.6-intel-2018b
 
 #Execute a Python program located in $HOME, that takes an input file and output directory as arguments.
-python main.py 
+python main.py
