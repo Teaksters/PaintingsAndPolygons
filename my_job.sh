@@ -1,8 +1,10 @@
 #!/bin/bash
 #Set job requirements
 #SBATCH -N 1
-#SBATCH -n 10
-#SBATCH -t 00:10:00
+#SBATCH -n 16
+#SBATCH -t 70:00:00
+#SBATCH --mail-type=BEGIN,END
+#SBATCH --mail-user=arneb.meijs@gmail.com
 
 # Loading modules
 module load 2019
