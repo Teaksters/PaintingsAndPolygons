@@ -103,15 +103,15 @@ def init_folder_structure(algorithm, paintings, repetitions, V_total,
 
 def experiment(name, algorithm, paintings, repetitions, V_total, iterations,
                savepoints, V_polygon, logfile, datafile, total_runs,
-               stepsize=0, worker=1, population_size=30, nmax=5,
-               main_res_folder="Results"):
+               stepsize=0, main_res_folder="Results", worker=1,
+               population_size=30, nmax=5):
 
     # main experiment, looping through repetitions, vertex numbers, and paintings:
     for painting in paintings:
 
         # create experiment directory for results and safepoints
         painting_name = painting.split("/")[1].split("-")[0]
-        folder = os.path.join("Results", painting_name)
+        folder = os.path.join(main_res_folder, painting_name)
         if not os.path.exists(folder):
             os.makedirs(folder)
 
