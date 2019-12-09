@@ -40,6 +40,12 @@ def split_df(df, column):
     return dfs, uniques
 
 
+def max_method(y):
+    '''Scales data using the max method'''
+    return y / max(y.flatten())
+
+
+###############################################################
 def simple_error_plot(x, y, yerr, painting, V_tot, multiple_V=False,
                       multiple_P=False):
     '''Plots graph'''
@@ -102,6 +108,7 @@ def singular_fitted_scatter_plot(V_p, MSE_val, painting, V_tot):
     plt.savefig(fig_fp)
     plt.close()
     return fig
+#######################################################################
 
 
 def multiple_V_plot(V_p, MSE_means, MSE_errs, painting, V_tots):
@@ -169,6 +176,8 @@ def multiple_scatterfit_GEN_plot(V_p, MSE_vals, V_tots):
                             for k in range(4)])
         MSE_val = MSE_val.reshape(4, -1)
         MSE_val = MSE_val.reshape(4, -1)
+        y_std = np.std(MSE_val, axis=1)
+        y_mean = np.mean(MSE_val, axis=1)
         x = np.array([V_p[i] for i in range(len(MSE_val)) for j in range(len(MSE_val[i]))])
         y = MSE_val.flatten()
 
@@ -184,12 +193,14 @@ def multiple_scatterfit_GEN_plot(V_p, MSE_vals, V_tots):
         fig = plt.figure()
         scatter_plot(x, y, 'Data points')
         plt.plot(X_uniq, Y_pred, color='k', label='trend line')
+        # plt.plot(X_uniq, y_mean, color='blue', label='mean')  # If including mean
+        plt.fill_between(X_uniq, y_mean - y_std, y_mean + y_std, color='blue', alpha=0.3, label='standard deviation')
         title = 'General trend all paintings for ' + str(V_tots[i % len(V_tots)]) + ' Vertices'
         plt.legend(loc='upper left')
         plt.title(title)
         plt.xlabel('Vertices Per Polygon')
         plt.ylabel('% Offset of mean MSE')
-        fig_fp = os.path.join('Analysis', 'General', 'scatter_Lfit_Pgen',
+        fig_fp = os.path.join('Analysis', 'General', 'scatter_Lfit_Vgen', 'max',
                               str(V_tots[i % len(V_tots)]) + '.png')
         plt.savefig(fig_fp)
         plt.close()
@@ -234,11 +245,22 @@ if __name__ == "__main__":
         for j in range(len(V_tot)):
             # Per painting and vertices used split on vertices per polygon
             dfs_vtot[j] = dfs_vtot[j].sort_values(by=['Vertices Per Polygon'])
-
             dfs_Vp, V_p = split_df(dfs_vtot[j], 'Vertices Per Polygon')
+
             # Format data to plottable state
             sample_MSE_list = [sample["MSE"].to_list() for sample in dfs_Vp]
             sample_MSE_list = np.array(sample_MSE_list)
+            
+            # Scale for comparison purposes
+            all_mean = np.mean(sample_MSE_list)
+            MSE_scaled = (sample_MSE_list - all_mean) / all_mean
+
+            # all_max = max(sample_MSE_list.flatten())
+            # MSE_scaled = sample_MSE_list / all_max
+
+            # calculate mean and standard deviation
+            MSE_std = np.std(MSE_scaled, axis=1)
+            MSE_mean = np.mean(MSE_scaled, axis=1)
 
             if singular:
                 singular_plot(V_p, MSE_mean, MSE_std, paintings[i], V_tot[j])
