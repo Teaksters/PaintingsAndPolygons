@@ -10,7 +10,7 @@ singular = False
 multiple_V = False
 multiple_P = False
 scatter_S = False
-scatter_M_gen = True
+scatter_M_gen = False
 scatter_M_Vgen = False
 
 
@@ -55,7 +55,7 @@ def simple_error_plot(x, y, yerr, painting, V_tot, multiple_V=False,
     if multiple_P:
         line_label = painting
     if multiple_P or multiple_V:
-        plt.errorbar(x, y, yerr=yerr, label=line_label, marker='o')
+        plt.plot(x, y, label=line_label)
     else:
         plt.errorbar(x, y, yerr=yerr, marker='o')
     plt.xticks(x, x)
@@ -118,10 +118,13 @@ def multiple_V_plot(V_p, MSE_means, MSE_errs, painting, V_tots):
                           True)
     title = painting + " All Vertice Combinations"
     plt.title(title)
-    plt.legend(loc='upper left')
-    plt.xlabel('Vertices Per Polygon')
-    plt.ylabel('% Offset of mean MSE')
-    fig_fp = os.path.join('Analysis', 'vertices', painting + "_All_Vertici.png")
+    plt.legend(loc='lower right')
+    plt.xlabel('Vertices Per Polygon (Vp)')
+    plt.ylabel('Vp mean / N-Vertices mean')
+    plt.grid()
+    plt.yticks(np.arange(-350, 200, 50))
+    # plt.yticks(np.arange(1, 2, 0.1))
+    fig_fp = os.path.join('Analysis', 'vertices', 'MSE_offset', painting + "_All_Vertici.png")
     plt.savefig(fig_fp)
     plt.close()
     return fig
@@ -134,6 +137,8 @@ def multiple_scatterfit_gen_plot(V_p, MSE_vals, painting):
     MSE_val = MSE_val.reshape(4, -1)
     y_std = np.std(MSE_val, axis=1)
     y_mean = np.mean(MSE_val, axis=1)
+    y_min = np.min(MSE_val, axis=1)
+    y_max = np.max(MSE_val, axis=1)
     x = np.array([V_p[i] for i in range(len(MSE_val)) for j in range(len(MSE_val[i]))])
     y = MSE_val.flatten()
 
@@ -147,23 +152,57 @@ def multiple_scatterfit_gen_plot(V_p, MSE_vals, painting):
 
     # Plot the scatter and fitted line
     fig = plt.figure()
-    scatter_plot(x, y, 'Data points')
-    plt.plot(X_uniq, Y_pred, color='k', label='trend line')
-    # plt.plot(X_uniq, y_mean, color='blue', label='mean')  # If including mean
-    plt.fill_between(X_uniq, y_mean - y_std, y_mean + y_std, color='blue', alpha=0.3, label='standard deviation')
-    title = 'All_paintings_General_trend_V'
+    # scatter_plot(x, y, 'Data points')
+    # plt.plot(X_uniq, Y_pred, color='k', label='trend line')
+    plt.plot(X_uniq, y_mean, color='blue', label='mean')  # If including mean
+    plt.fill_between(X_uniq, y_mean - y_std, y_mean + y_std, color='blue', alpha=0.5, label='standard deviation')
+    plt.fill_between(X_uniq, y_min, y_max, color='blue', alpha=0.2, label='min-max')
+    title = painting + ' All Vertices General Trend'
     plt.legend(loc='upper left')
     plt.title(title)
-    plt.xlabel('Vertices Per Polygon')
-    plt.ylabel('MSE / max_MSE')
+    plt.xlabel('Vertices Per Polygon (Vp)')
+    plt.ylabel('MSE per Vp / mean_MSE all Vp (per total vertices)')
 
     # set axes range
-    # plt.yticks(np.arange(0.0, 1.0, 0.1))
+    plt.yticks(np.arange(1.0, 4.0, 0.5))
+    plt.xticks(X_uniq, X_uniq)
     plt.grid(axis='y')
-    fig_fp = os.path.join('Analysis', 'General', 'scatter_Lfit_Pgen', 'max',
+    fig_fp = os.path.join('Analysis', 'General', 'scatter_Lfit_Pgen', 'min',
                           painting + '.png')
     plt.savefig(fig_fp)
     plt.close()
+    return fig
+
+
+######################################################################
+# TO DO: FIX PLOTJES VOOR ALLES (offset klopt niet meer met 3x 1500 en 1800) met aparte code (only 3 schilderijen)
+######################################################################
+
+def multiple_P_plot(V_p, MSE_means, MSE_errs, paintings, V_tots):
+    fig = plt.figure()
+    offset = len(paintings) - 1
+    print(len(MSE_means))
+    for i in range(len(V_tots)):
+        for j in range(len(paintings)):
+            print(offset * j + i)
+            simple_error_plot(V_p,
+                              MSE_means[offset * j + i],
+                              MSE_errs[offset * j + i],
+                              paintings[j],
+                              V_tots[i], multiple_P=True)
+        title = str(V_tots[i]) + " Vertices All Paintings Comparison"
+        plt.title(title)
+        plt.legend(loc='upper left')
+        plt.legend(loc='lower right')
+        plt.xlabel('Vertices Per Polygon (Vp)')
+        plt.ylabel('Vp mean / N-Vertices mean')
+        plt.grid()
+        # plt.yticks(np.arange(-350, 200, 50))
+        plt.yticks(np.arange(1, 2, 0.1))
+        fig_fp = os.path.join('Analysis', 'paintings', 'min',
+                              str(V_tots[i]) + "_V_All_Paintings.png")
+        plt.savefig(fig_fp)
+        plt.close()
     return fig
 
 
@@ -200,33 +239,12 @@ def multiple_scatterfit_GEN_plot(V_p, MSE_vals, V_tots):
         plt.title(title)
         plt.xlabel('Vertices Per Polygon')
         plt.ylabel('% Offset of mean MSE')
-        fig_fp = os.path.join('Analysis', 'General', 'scatter_Lfit_Vgen', 'max',
+        fig_fp = os.path.join('Analysis', 'General', 'scatter_Lfit_Vgen', 'MSE_offset',
                               str(V_tots[i % len(V_tots)]) + '.png')
         plt.savefig(fig_fp)
         plt.close()
     return fig
 
-
-def multiple_P_plot(V_p, MSE_means, MSE_errs, paintings, V_tots):
-    fig = plt.figure()
-    offset = len(paintings) - 1
-    for i in range(len(V_tots)):
-        for j in range(len(paintings)):
-            simple_error_plot(V_p,
-                              MSE_means[offset * j + i],
-                              MSE_errs[offset * j + i],
-                              paintings[j],
-                              V_tots[i], multiple_P=True)
-        title = str(V_tots[i]) + " Vertices All Paintings Comparison"
-        plt.title(title)
-        plt.legend(loc='upper left')
-        plt.xlabel('Vertices Per Polygon')
-        plt.ylabel('% Offset of mean MSE')
-        fig_fp = os.path.join('Analysis', 'paintings',
-                              str(V_tots[i]) + "_V_All_Paintings.png")
-        plt.savefig(fig_fp)
-        plt.close()
-    return fig
 
 if __name__ == "__main__":
     multiple_means = []
@@ -250,13 +268,14 @@ if __name__ == "__main__":
             # Format data to plottable state
             sample_MSE_list = [sample["MSE"].to_list() for sample in dfs_Vp]
             sample_MSE_list = np.array(sample_MSE_list)
-            
-            # Scale for comparison purposes
-            all_mean = np.mean(sample_MSE_list)
-            MSE_scaled = (sample_MSE_list - all_mean) / all_mean
 
-            # all_max = max(sample_MSE_list.flatten())
-            # MSE_scaled = sample_MSE_list / all_max
+            # Scale for comparison purposes
+            # all_mean = np.mean(sample_MSE_list)
+            # MSE_scaled = sample_MSE_list - all_mean
+
+            all_max = max(sample_MSE_list.flatten())
+            all_min = min(sample_MSE_list.flatten())
+            MSE_scaled = (sample_MSE_list - all_min) / (all_max - all_min)
 
             # calculate mean and standard deviation
             MSE_std = np.std(MSE_scaled, axis=1)
