@@ -4,6 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+afg = ['Bach', 'Dali', 'The Kiss', 'Mona Lisa', 'Mondriaan', 'Convergence', 'Salvator Mundi', 'The Starry Night', 'Dama con l\'ermellino']
+
 def read_data_file(fp):
     '''Reads given datafile format sorts by painting (sorting might be
     redundant)
@@ -45,10 +47,10 @@ def minmax_std_mean_plot(V_p, MSE_val, painting):
     plt.fill_between(X_uniq, y_mean - y_std, y_mean + y_std, color='blue', alpha=0.5, label='standard deviation')
     plt.fill_between(X_uniq, y_min, y_max, color='blue', alpha=0.2, label='min-max')
     title = painting
-    plt.legend(loc='upper left')
+    plt.legend(loc='lower right')
     plt.title(title)
     plt.xlabel('Vertices Per Polygon (Vp)')
-    plt.ylabel('relative MSE_score')
+    plt.ylabel('Normalized Score')
 
     # set axes range
     plt.yticks(np.arange(0.0, 1.0, 0.1))
@@ -59,9 +61,10 @@ def minmax_std_mean_plot(V_p, MSE_val, painting):
     plt.close()
     return fig
 
-def multi_plot(data, paintings, V_p=[3, 4, 5, 6]):
+def multi_plot(data, paintings=afg, V_p=[3, 4, 5, 6]):
     '''MSE_vals: array [[vals for 3], ..., [vals for 6]]'''
-    fig, ax = plt.subplots(3, 3, sharex='col', sharey='row', constrained_layout=False)
+    fig, ax = plt.subplots(3, 3, sharex='col', sharey='row',
+                           constrained_layout=False, figsize = (8,8))
     plt.setp(ax, xticks=[3, 4, 5, 6], yticks=np.arange(0, 1.1, 0.25))
     for i in range(len(paintings)):
         y_std = np.std(data[i], axis=1)
@@ -97,6 +100,7 @@ def multi_plot(data, paintings, V_p=[3, 4, 5, 6]):
 if __name__=='__main__':
     datafp = os.path.join("Results", "HC-DATA.csv")
     df = read_data_file(datafp)
+    print(df.shape)
     data = []
     temp = []
     fin = []
@@ -107,7 +111,7 @@ if __name__=='__main__':
     # for df_vp in dfs:
     #     data.append(df_vp['Scaled'].to_numpy())
     # print(np.min(data, axis=1), np.max(data, axis=1))
-    # minmax_std_mean_plot([3, 4, 5, 6], np.array(data), 'All')
+    # minmax_std_mean_plot([3, 4, 5, 6], np.array(data), 'General Trend Normalized Scores Per Polygon Type')
 
     dfs, split_p = split_df(df, 'Painting')
     for dfss in dfs:
@@ -119,5 +123,5 @@ if __name__=='__main__':
         fin.append(data)
         c += 1
         data = []
-    multi_plot(fin, split_p)
+    multi_plot(fin)
     print('done')
